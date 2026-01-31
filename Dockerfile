@@ -2,12 +2,15 @@
 
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 ENV DEBIAN_FRONTEND=noninteractive \
-    PIP_NO_CACHE_DIR=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     CUDA_HOME=/usr/local/cuda \
-    PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu121 \
     HF_HOME=/cache
     
 RUN apt-get update && \
@@ -33,16 +36,12 @@ RUN apt-get update && \
     libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
-    python3.11 -m pip install --upgrade pip setuptools setuptools_scm wheel
-
 WORKDIR /app
 
 COPY . /app
 
-RUN pip install --no-cache-dir -e /app
+# Install with uv (CUDA detected automatically on Linux via platform markers)
+RUN uv pip install --system --no-cache -e /app
 
 ARG DOWNLOAD_WEIGHTS=false
 RUN mkdir -p "${HF_HOME}" && \
