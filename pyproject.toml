@@ -1,10 +1,6 @@
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
-
-# [build-system]
-# requires = ["setuptools>=68", "setuptools_scm[toml]>=8"]
-# build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.8.22"]
+build-backend = "uv_build"
 
 [project]
 name = "boltzgen"
@@ -33,31 +29,19 @@ dependencies = [
     "einx",
     "einops",
     "mashumaro",
-    "nvidia-ml-py>=12.535.133",
-    "cuequivariance_ops_cu12>=0.5.0",
-    "cuequivariance_ops_torch_cu12>=0.5.0",
-    "cuequivariance_torch>=0.5.0",
     "huggingface_hub",
-    "biopython", 
+    "biopython",
+    # CUDA-only dependencies (Linux only)
+    "nvidia-ml-py>=12.535.133 ; sys_platform == 'linux'",
+    "cuequivariance_ops_cu12>=0.5.0 ; sys_platform == 'linux'",
+    "cuequivariance_ops_torch_cu12>=0.5.0 ; sys_platform == 'linux'",
+    "cuequivariance_torch>=0.5.0 ; sys_platform == 'linux'",
 ]
-
-# Enables the usage of setuptools_scm
-# [tool.setuptools_scm]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-include-package-data = true
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-boltzgen = ["resources/config/**/*"]
 
 [project.scripts]
 boltzgen = "boltzgen.cli.boltzgen:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 lint = ["ruff"]
 test = ["pytest"]
 doc = []
@@ -67,10 +51,27 @@ dev = [
     "wandb",
     "requests",
     "types-requests==2.32.4.*",
-    "boltzgen[lint]",
-    "boltzgen[test]",
-    "boltzgen[doc]",
-    "boltzgen[build]",
+]
+
+[tool.uv.build-backend]
+module-name = "boltzgen"
+module-root = "src"
+
+# PyTorch index configuration for cross-platform support
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
 ]
 
 [tool.ruff]
